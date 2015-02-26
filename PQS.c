@@ -203,6 +203,7 @@ Customer *addfront (Customer *listp, Customer *newp){
 Customer *addend (Customer *listp, Customer *newp){
     Customer *p;
     if(listp == NULL){
+        //listp = newp;
         return newp;
     }
     for (p=listp; p->next != NULL; p = p->next);
@@ -242,6 +243,15 @@ void freeall (Customer *listp) {
     }
 }
 
+void print_list (Customer *listp){
+    Customer *next;
+    
+    for ( ; listp != NULL; listp = next){
+        next = listp->next;
+        printf("Customer #%d.\n", listp->id);
+    }
+}
+
 /* Traverse list and delete nodes that have terminated*/
 /*
 void check_bg_list(Customer *listp){
@@ -277,6 +287,7 @@ int parse_line(char* input){
     while (basic_token != NULL){
         token = string_duplicator(basic_token);
         addstring(token);
+        printf("basic_token: %s\n", basic_token);
         basic_token = strtok(NULL, separator);
     }
     
@@ -288,14 +299,13 @@ int parse_line(char* input){
     return 0;
 }
 
-/* Dr. Zastre's code from class */
+/* Based on Dr. Zastre's code from SENG 265 */
 void parse_file(char *filename){
+    printf("Enter parse file.\n");
     FILE *fp;
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
-    
-    //Customer *new_customer;
     
     fp = fopen(filename, "r");
     if(fp == NULL){
@@ -314,16 +324,17 @@ void parse_file(char *filename){
     //parse remaining lines of input file
     while((read = getline(&line, &len, fp)) != -1){
         chomp(line);
-        if(debug){
+        if(1){
             printf("Retrieved line of length %zu :\n", read);
             printf("%s\n", line);
         }
         
         /* process line */
-        //new_customer = (Customer *) emalloc(sizeof(Customer));
         parse_line(line);
         Customer* new_customer = newitem(count);
-        addend(customer_list, new_customer);
+        customer_list = addend(customer_list, new_customer);
+        print_list(customer_list);
+        count++;
     }
     
     if(line){
