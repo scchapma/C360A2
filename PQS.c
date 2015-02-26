@@ -88,8 +88,7 @@ int debug = 0;
 
 
 /* Global / shared variables */
-pthread_mutex_t c_mutex, ch_mutex;
-pthread_mutex_t mutex;
+pthread_mutex_t queue_mutex, service_mutex;
 
 int num_threads;
 
@@ -351,13 +350,12 @@ void init()
     fprintf(stdout, "\n");
     
     /*init mutexes*/
-    int init_c_mutex = pthread_mutex_init(&c_mutex, NULL);
-    int init_ch_mutex = pthread_mutex_init(&ch_mutex, NULL);
-    int init_mutex = pthread_mutex_init(&mutex, NULL);
+    int init_queue_mutex = pthread_mutex_init(&queue_mutex, NULL);
+    int init_service_mutex = pthread_mutex_init(&service_mutex, NULL);    
     
     /*check for nulls */
-    if(init_c_mutex != 0 || init_ch_mutex != 0 || init_mutex != 0){
-        fprintf(stdout, "Exiting - failed to initialize the semaphores.  Error: %d\n", errno);
+    if(init_queue_mutex != 0 || init_service_mutex != 0){
+        fprintf(stdout, "Exiting - failed to initialize the mutexes.  Error: %d\n", errno);
         exit(1);
     }
     
@@ -373,6 +371,10 @@ int *dupInt( int i )
 	return pi;
 }
 
+int customer_threads(){
+    return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -383,7 +385,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "usage: PQS <file name>\n");
 		exit(1);
 	}
-
+    
 	//process file - argv[1]
     parse_file(argv[1]);
 	//save # of threads
@@ -392,6 +394,7 @@ int main(int argc, char *argv[])
 	init();
 	
 	//create threads
+    customer_threads();
 	//call main thread function - implement Wu's algorithm	
 
 	/*
