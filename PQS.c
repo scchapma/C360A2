@@ -4,29 +4,7 @@
  *
  * Stephen Chapman, V00190898
  *
- * Interstellar-space problem: 
- * 
- *  Input:   A user-determined number of n atoms
- *  Output:  The maximum number of HC2 radicals, based on a randomly generated split of the
- *           n atoms into m hydrogen atoms and (n-m) carbon atoms.
  *
- *  The program produces n threads, each representing an atom.
- *
- *  The program then allows these threads to determine how they combine into a set of
- *  radicals, each containing one hydrogen atom and two carbon atoms.
- *
- *  The production of radicals is controlled by a series of semaphores.  These semaphores
- *  are organized in a manner that prevents the starvation of any of the n threads.
- *
- *  After the maximum number of radicals has been produced, the blocked threads are released and
- *  the program terminates.
- *
- *  There are two options for program output.  If the user desires a detailed review of radical
- *  production, the output can be sent to a file.  Otherwise, the output can be piped to 
- *  a companion Python file (script_a1.py) that will output a summary and notify the user
- *  as to whether the program passed (no starvation) or failed (starvation).
- *
- *  This program for BONUS MARKS - Reimplementation of program using mutexes.
  */
 
 #include <assert.h>
@@ -387,7 +365,7 @@ int create_customer_threads(int count){
     
     pthread_t customer_thread[count];
     
-    int i, j, status;
+    int i, j, status, status_join;
     
     for (i = 0; i < count; i++) {
         //customer_thread[i] = (pthread_t *)malloc(sizeof(pthread_t));
@@ -398,13 +376,18 @@ int create_customer_threads(int count){
             fprintf(stderr, "Error creating customer thread\n");
             exit(1);
         }
-        
         customer_list = customer_list->next;
     }
     
     for(j=0; j < count; j++)
     {
-        pthread_join(customer_thread[j], NULL);
+        status_join = pthread_join(customer_thread[j], NULL);
+        printf("Joined thread #%d.\n", j+1);
+        
+        if (status_join != 0) {
+            fprintf(stderr, "Error joining customer thread\n");
+            exit(1);
+        }
     }
     
     return 0;
