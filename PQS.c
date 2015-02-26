@@ -35,7 +35,51 @@
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
+
+/*-----------------------------------------------------------------------------
+ ** 		STRUCT DEFINITIONS
+ **-----------------------------------------------------------------------------
+ */
+
+typedef int bool;
+#define true 1
+#define false 0
+
+/* Contents of user input string */
+struct Stringtab{
+    int sval;
+    int max;
+    char **stringval;
+} stringtab;
+
+enum {FINIT = 1, FGROW = 2};
+
+/* Node struct for list of background functions */
+typedef struct Customer {
+    int id;
+    int arrival_time;
+    int service_time;
+    int priority;
+    int place_in_list;
+    struct Customer *next;
+} Customer;
+
+/* Head for list of background functions */
+Customer *bg_list = NULL;
+Customer *customer_list = NULL;
+
+/* File-scope variable: root node for the linked list */
+Customer *queue = NULL;
+
+
+/* -------------------------------------------------------------------------------------------
+ **		FILE-SCOPE VARIABLES
+ ** -------------------------------------------------------------------------------------------
+ */
+
+int debug = 0;
 
 
 /* Random # below threshold indicates H; otherwise C. */
@@ -46,6 +90,247 @@
 /* Global / shared variables */
 pthread_mutex_t c_mutex, ch_mutex;
 pthread_mutex_t mutex;
+
+int num_threads;
+
+/* -------------------------------------------------------------------------------------------
+ ** 		ACCESSORY FUNCTIONS
+ ** -------------------------------------------------------------------------------------------
+ */
+
+/* Dr. Zastre's code from SENG 265 */
+/* If newline at end of string, then remove it.*/
+void chomp(char *line) {
+    int len;
+    
+    if (line == NULL) {
+        return;
+    }
+    
+    len = strlen(line);
+    if (line[len-1] == '\n') {
+        line[len-1] = '\0';
+    }
+    
+    len = strlen(line);
+    if (line[len-1] == '\r') {
+        line[len-1] = '\0';
+    }
+}
+
+/* Dr. Zastre's code from SENG 265 */
+char *string_duplicator(char *input) {
+    char *copy;
+    assert (input != NULL);
+    copy = (char *)malloc(sizeof(char) * strlen(input) + 1);
+    if (copy == NULL) {
+        fprintf(stderr, "error in string_duplicator");
+        exit(1);
+    }
+    strncpy(copy, input, strlen(input)+1);
+    return copy;
+}
+
+/* Dr. Zastre's code from SENG 265 */
+void *emalloc(size_t n){
+    void *p;
+    p = malloc(n);
+    if (p == NULL) {
+        fprintf(stderr, "malloc of %lu bytes failed", n);
+        exit(1);
+    }
+    return p;
+}
+
+/* Amended version of Dr. Zastre's "addname" code from SENG 265 */
+int addstring(char *newstring){
+    char **fp;
+    
+    if(stringtab.stringval == NULL){
+        stringtab.stringval = (char **) emalloc(FINIT*sizeof(char *));
+        stringtab.max = FINIT;
+        stringtab.sval = 0;
+    }else if(stringtab.sval >= stringtab.max){
+        fp = (char **) realloc(stringtab.stringval, (FGROW*stringtab.max)*sizeof(char *));
+        if(stringtab.stringval == NULL){
+            return -1;
+        }
+        stringtab.max = FGROW*stringtab.max;
+        stringtab.stringval = fp;
+    }
+    stringtab.stringval[stringtab.sval] = newstring;
+    return stringtab.sval++;
+}
+
+int reset_string_array(){
+    stringtab.sval = 0;
+    stringtab.max = 0;
+    stringtab.stringval = NULL;
+    free(stringtab.stringval);
+    return 0;
+}
+
+/* -------------------------------------------------------------------------------------------
+ **              LINKED LIST FUNCTIONS
+ ** -------------------------------------------------------------------------------------------
+ */
+
+/* Node constructor */
+Customer *newitem (int count){
+    Customer *newp;
+    newp = (Customer *) emalloc(sizeof(Customer));
+    
+    //traverse string array to populate struct
+    newp->id = atoi(*stringtab.stringval++);
+    newp->arrival_time = atoi(*stringtab.stringval++);
+    newp->service_time = atoi(*stringtab.stringval++);
+    newp->priority = atoi(*stringtab.stringval++);
+    newp->place_in_list = count;
+    newp->next = NULL;
+    
+    reset_string_array();
+    
+    return newp;
+}
+
+/* Add new node to front of list */
+Customer *addfront (Customer *listp, Customer *newp){
+    newp->next = listp;
+    return newp;
+}
+
+/* Add new node to end of list */
+Customer *addend (Customer *listp, Customer *newp){
+    Customer *p;
+    if(listp == NULL){
+        return newp;
+    }
+    for (p=listp; p->next != NULL; p = p->next);
+    p->next = newp;
+    return listp;
+}
+
+
+/* Delete item at given pointer */
+Customer *delitem (Customer *listp, Customer *targetp){
+    Customer *p, *prev;
+    
+    prev = NULL;
+    for (p = listp; p != NULL; p = p-> next){
+        if (p == targetp){
+            if (prev == NULL){
+                listp = p->next;
+            }else{
+                prev->next = p->next;
+            }
+            free(p);
+            return listp;
+        }
+        prev = p;
+    }
+    fprintf(stderr, "delitem: %d not in list", targetp->id);
+    exit(1);
+}
+
+/* Free memory for all remaining nodes in list */
+void freeall (Customer *listp) {
+    Customer *next;
+    
+    for ( ; listp != NULL; listp = next){
+        next = listp->next;
+        free(listp);
+    }
+}
+
+/* Traverse list and delete nodes that have terminated*/
+/*
+void check_bg_list(Customer *listp){
+    
+    for ( ; listp != NULL; listp = listp->next){
+        int retVal = waitpid(listp->pid, &listp->status, WNOHANG);
+        if (retVal == -1){
+            perror("waitpid");
+            exit(EXIT_FAILURE);
+        }
+        if(retVal > 0){
+            printf("Background process terminated - pid: %d, command: %s.\n",
+                   listp->pid, listp->name, WEXITSTATUS(listp->status));
+            bg_list = delitem(bg_list, listp);
+        }
+    }
+}
+*/
+
+
+/* -------------------------------------------------------------------------------------------
+ ** 		MAIN EVENT FUNCTIONS
+ ** -------------------------------------------------------------------------------------------
+ */
+
+/* tokenize files command-line argument and store file strings in dynamic array */
+int parse_line(char* input){
+    
+    char *separator = ":,";
+    char *basic_token = strtok(input, separator);
+    char *token;
+    
+    while (basic_token != NULL){
+        token = string_duplicator(basic_token);
+        addstring(token);
+        basic_token = strtok(NULL, separator);
+    }
+    
+    if(stringtab.sval == 0){
+        return 0;
+    }
+    
+    addstring(NULL);	
+    return 0;
+}
+
+/* Dr. Zastre's code from class */
+void parse_file(char *filename){
+    FILE *fp;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    
+    //Customer *new_customer;
+    
+    fp = fopen(filename, "r");
+    if(fp == NULL){
+        printf("Cannot located file %s\n", filename);
+        exit(1);
+    }
+    
+    int count = 1;
+    
+    //parse first line of input file
+    if((read = getline(&line, &len, fp)) != -1){
+        chomp(line);
+        num_threads = atoi(line);
+    }
+    
+    //parse remaining lines of input file
+    while((read = getline(&line, &len, fp)) != -1){
+        chomp(line);
+        if(debug){
+            printf("Retrieved line of length %zu :\n", read);
+            printf("%s\n", line);
+        }
+        
+        /* process line */
+        //new_customer = (Customer *) emalloc(sizeof(Customer));
+        parse_line(line);
+        Customer* new_customer = newitem(count);
+        addend(customer_list, new_customer);
+    }
+    
+    if(line){
+        free(line);
+    }
+    exit(0);
+}
 
 
 void init()
@@ -75,183 +360,6 @@ int *dupInt( int i )
 	return pi;
 }
 
-/* Determine target number of molecules based on number of H atoms and C atoms */
-int compute_max_molecules (int hNum, int cNum)
-{
-	int max_possible_molecules = cNum/2;
-	/*take min of theoretical max (given #C) and #H*/
-	if(max_possible_molecules > hNum) max_molecules = hNum;
-	else max_molecules = max_possible_molecules;
-	//fprintf(stdout, "Max molecules: %d\n\n", max_molecules);
-	return max_molecules;
-}
-
-void printMessage(int atom, int type)
-{
-  	char type_char; 
-  	if(type == HYDROGEN) type_char = 'H';
-  	else type_char = 'C';
-
-  	pthread_mutex_lock(&mutex);
-  	fprintf(stdout, "A ethynyl radical was made by actions of %c%d.\n", type_char, atom);
-  	fprintf(stdout, "Radical composition: H%d, C%d, C%d.\n", h_buffer[0], c_buffer[0], c_buffer[1]);
-  	fprintf(stdout, "Molecule #%d.\n\n", radical_counter);
-  	pthread_mutex_unlock(&mutex);
-}
-
-/*make calls to release remaining threads */
-void terminate ()
-{
-    fprintf(stdout, "Actual molecules = Target molecules.\n");
-    fprintf(stdout, "Terminate program - release all blocked threads..\n");
-    terminate = TRUE;
-    int h_remaining = hNum - radical_counter;
-    int c_remaining = cNum - (2*radical_counter);
-    int i;
-    for (i=0; i<h_remaining; i++){
-        sem_post(&h_sem);
-    }
-    for (i=0; i<c_remaining; i++){
-        pthread_mutex_unlock(&c_mutex);
-        sem_post(&c_sem);
-    }
-    
-}
-
-/* Create a radical and reset buffers for next radical */
-void makeRadical(int atom, int type)
-{
-    radical_counter++;
-    /*printMessage(atom, type);*/
-  
-    char type_char;
-    if(type == HYDROGEN) type_char = 'H';
-    else type_char = 'C';
-
-    pthread_mutex_lock(&mutex);
-    fprintf(stdout, "\nA ethynyl radical was made by actions of %c%d.\n", type_char, atom);
-    fprintf(stdout, "Molecule #%d - radical composition: H%d, C%d, C%d.\n\n", radical_counter, h_buffer[0], c_buffer[0], c_buffer[1]);
-    pthread_mutex_unlock(&mutex);
-
-    /*reset buffers*/
-    h_buffer[0] = c_buffer[0] = c_buffer[1] = 0;
-    
-    /*reset semaphores*/
-    if(type == HYDROGEN){
-        sem_post(&c_molecule_complete);
-        sem_post(&c_molecule_complete);
-    }else{
-        sem_post(&c_molecule_complete);
-        sem_post(&h_molecule_complete);
-    }
-
-    /*track max computations */
-    max_molecules = compute_max_molecules(hNum, cNum);
-
-    if(radical_counter==final_max_molecules) terminate();
-}
-
-/* Allow H atom into buffer and block all others until buffer free */
-void *hReady( void *arg )
-{
-	int id = *((int *)arg);
-	pthread_mutex_lock(&mutex);
-	printf("hydrogen %d is alive\n", id);
-	pthread_mutex_unlock(&mutex);
-
-	/* only one H atom can enter here at a time */
-    sem_wait(&h_sem);
-
-	/* need to block C atoms as well when adding H atom to buffer */
-    pthread_mutex_lock(&ch_mutex);
-	h_in = h_in % HYDROGEN_SIZE;
-	h_buffer[0] = id;
-	pthread_mutex_lock(&mutex);
-  	fprintf(stdout, "H%d in buffer.\n", id);
-	pthread_mutex_unlock(&mutex);
-	h_in++;
-		
-	if(terminate){
-	  /*pthread_mutex_lock(&mutex);*/
-	  printf("terminate - return h%d\n", id);
-	  /*pthread_mutex_unlock(&mutex);*/
-          exit(1);
-	}
-	
-	/*if carbon buffer full, call makeRadical*/
-	if(c_buffer[0] && c_buffer[1]){
-	  makeRadical(id, HYDROGEN);
-	  pthread_mutex_unlock(&ch_mutex);
-    /*otherwise, wait for a C atom to complete the radical*/
-	}else{
-	  pthread_mutex_unlock(&ch_mutex);
-	  sem_wait(&h_molecule_complete);		
-	}
-	
-	pthread_mutex_lock(&mutex);
-	printf("return h%d\n", id);
-	pthread_mutex_unlock(&mutex);
-
-	sem_post(&h_sem); 
-
-	return arg;   
-}
-
-
-void *cReady( void *arg )
-{
-	int id = *((int *)arg);
-	pthread_mutex_lock(&mutex);
-	printf("carbon %d is alive\n", id);
-	pthread_mutex_unlock(&mutex);
-	
-	/*Two C atoms can enter here */
-    	sem_wait(&c_sem);
-	
-    	pthread_mutex_lock(&c_mutex);
-	if(terminate){  
-	  printf("terminate - return c%d\n", id);
-          exit(1);
-	}
-	pthread_mutex_unlock(&c_mutex);
-
-	/* But only one C atom at a time here */
-    	pthread_mutex_lock(&c_mutex);
-
-	/* Need to block H atoms as well when adding C atom to buffer */
-	pthread_mutex_lock(&ch_mutex);
-    
-	/*if hydrogen buffer and other carbon buffer full, call makeRadical*/
-	if(h_buffer[0] && (c_buffer[0] || c_buffer[1])){
-	  if (!c_buffer[0]) c_buffer[0] = id;
-	  else c_buffer[1] = id;
-	  fprintf(stdout, "C%d in buffer.\n", id);
-	  makeRadical(id, CARBON);
-	  pthread_mutex_unlock(&ch_mutex);
-	  pthread_mutex_unlock(&c_mutex); 
-	/*otherwise, add carbon atom to carbon buffer and wait for another atom to call makeRadical*/
-	}else{
-	  if (!c_buffer[0]){ 
-		c_buffer[0] = id;
-		fprintf(stdout, "C%d in buffer.\n", id);
-	  }
-	  else {
-		c_buffer[1] = id;
-		fprintf(stdout, "C%d in buffer.\n", id);
-	  }
-	  pthread_mutex_unlock(&ch_mutex);
-	  pthread_mutex_unlock(&c_mutex);
-	  sem_wait(&c_molecule_complete);
-	}
-
-	pthread_mutex_lock(&mutex);
-	printf("return c%d\n", id);
-	pthread_mutex_unlock(&mutex);
-
-	sem_post(&c_sem);
-
-	return arg;
-}
 
 int main(int argc, char *argv[])
 {
@@ -264,6 +372,7 @@ int main(int argc, char *argv[])
 	}
 
 	//process file - argv[1]
+    parse_file(argv[1]);
 	//save # of threads
 	//create LL of customer structs (
 	
@@ -272,7 +381,8 @@ int main(int argc, char *argv[])
 	//create threads
 	//call main thread function - implement Wu's algorithm	
 
-	for (i = 0; i < numAtoms; i++) {
+	/*
+    for (i = 0; i < numAtoms; i++) {
 		atom[i] = (pthread_t *)malloc(sizeof(pthread_t));
 		if ( (double)rand()/(double)RAND_MAX < ATOM_THRESHOLD ) {
 			hNum++;
@@ -293,11 +403,14 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 	}
+    */
 
 	/* join threads */
+    /*
 	for (i=0; i<numAtoms; i++){
 	  pthread_join(*atom[i], NULL);
 	}
+    */
 
 	exit(0);
 }
