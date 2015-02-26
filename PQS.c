@@ -277,7 +277,7 @@ void check_bg_list(Customer *listp){
  ** -------------------------------------------------------------------------------------------
  */
 
-/* tokenize files command-line argument and store file strings in dynamic array */
+/* tokenize each line of input file (i.e., each customer) and store file strings in dynamic array */
 int parse_line(char* input){
     
     char *separator = ":,";
