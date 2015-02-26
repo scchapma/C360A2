@@ -187,6 +187,8 @@ Customer *newitem (int count){
     newp->priority = atoi(*stringtab.stringval++);
     newp->place_in_list = count;
     newp->next = NULL;
+    printf("New item: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
+           newp->id, newp->arrival_time, newp->service_time, newp->priority, newp->place_in_list);
     
     reset_string_array();
     
