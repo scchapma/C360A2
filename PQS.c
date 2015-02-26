@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 /*-----------------------------------------------------------------------------
  ** 		STRUCT DEFINITIONS
@@ -24,6 +25,8 @@
 typedef int bool;
 #define true 1
 #define false 0
+
+#define SLEEP_FACTOR 100000
 
 /* Contents of user input string */
 struct Stringtab{
@@ -357,6 +360,13 @@ void *process_thread(void *customer_node){
            node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
     
     //implement Wu's Algorithm here for each thread...
+    
+    //sleep until arrival time
+    int sleep_time = SLEEP_FACTOR*(node->arrival_time);
+    usleep(sleep_time);
+    
+    //request service
+    
     
     return((void *) 0);
 }
