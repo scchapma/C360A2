@@ -351,7 +351,7 @@ void init()
     
     /*init mutexes*/
     int init_queue_mutex = pthread_mutex_init(&queue_mutex, NULL);
-    int init_service_mutex = pthread_mutex_init(&service_mutex, NULL);    
+    int init_service_mutex = pthread_mutex_init(&service_mutex, NULL);
     
     /*check for nulls */
     if(init_queue_mutex != 0 || init_service_mutex != 0){
@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 	
 	init();
 	
-	//create threads
+	//create customer threads
     customer_threads();
 	//call main thread function - implement Wu's algorithm	
 
