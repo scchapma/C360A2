@@ -378,6 +378,8 @@ void *process_thread(void *customer_node){
     printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
            node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
     
+    //implement Wu's Algorithm here for each thread...
+    
     return((void *) 0);
 }
 
@@ -390,6 +392,7 @@ int create_customer_threads(int count){
     for (i = 0; i < count; i++) {
         //customer_thread[i] = (pthread_t *)malloc(sizeof(pthread_t));
         status = pthread_create(&customer_thread[i], NULL, process_thread, customer_list);
+        printf("Created thread #%d.\n", i+1);
         
         if (status != 0) {
             fprintf(stderr, "Error creating customer thread\n");
@@ -411,48 +414,16 @@ int create_customer_threads(int count){
 int main(int argc, char *argv[])
 {
 	
-	//local variables
-
 	if ( argc != 2  ) {
 		fprintf(stderr, "usage: PQS <file name>\n");
 		exit(1);
 	}
     
-	//process file - argv[1]
+	//process file - create list of customer structs and determine # of customer threads
     parse_file(argv[1]);
-    
-	//save # of threads
-	//create LL of customer structs (
-	
 	init();
+	create_customer_threads(count);
 	
-	//create customer threads
-    create_customer_threads(count);
-	//call main thread function - implement Wu's algorithm	
-
-	/*
-    for (i = 0; i < numAtoms; i++) {
-		atom[i] = (pthread_t *)malloc(sizeof(pthread_t));
-		if ( (double)rand()/(double)RAND_MAX < ATOM_THRESHOLD ) {
-			hNum++;
-			status = pthread_create (
-					atom[i], NULL, hReady,
-					(void *)dupInt(hNum)
-				);
-		} else {
-			cNum++;
-			status = pthread_create (
-
-					atom[i], NULL, cReady,
-					(void *)dupInt(cNum)
-				);
-		}
-		if (status != 0) {
-			fprintf(stderr, "Error creating atom thread\n");
-			exit(1);
-		}
-	}
-    */
 
 	/* join threads */
     /*
