@@ -366,7 +366,8 @@ void *process_thread(void *customer_node){
     usleep(sleep_time);
     
     //request service
-    
+    //sleep for service time
+    //release service
     
     return((void *) 0);
 }
