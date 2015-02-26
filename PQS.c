@@ -80,6 +80,7 @@ Customer *queue = NULL;
  */
 
 int debug = 0;
+int count = 0;
 
 
 /* Random # below threshold indicates H; otherwise C. */
@@ -314,7 +315,7 @@ void parse_file(char *filename){
         exit(1);
     }
     
-    int count = 1;
+    //count = 1;
     
     //parse first line of input file
     if((read = getline(&line, &len, fp)) != -1){
@@ -324,6 +325,7 @@ void parse_file(char *filename){
     
     //parse remaining lines of input file
     while((read = getline(&line, &len, fp)) != -1){
+        count++;
         chomp(line);
         if(1){
             printf("Retrieved line of length %zu :\n", read);
@@ -335,19 +337,19 @@ void parse_file(char *filename){
         Customer* new_customer = newitem(count);
         customer_list = addend(customer_list, new_customer);
         print_list(customer_list);
-        count++;
+        //count++;
     }
     
     if(line){
         free(line);
     }
-    exit(0);
+    return;
 }
 
 
 void init()
 {
-    fprintf(stdout, "\n");
+    fprintf(stdout, "Enter init.\n");
     
     /*init mutexes*/
     int init_queue_mutex = pthread_mutex_init(&queue_mutex, NULL);
@@ -371,7 +373,37 @@ int *dupInt( int i )
 	return pi;
 }
 
-int customer_threads(){
+void *process_thread(void *customer_node){
+    Customer *node = (Customer *) customer_node;
+    printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
+           node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
+    
+    return((void *) 0);
+}
+
+int create_customer_threads(int count){
+    
+    pthread_t customer_thread[count];
+    
+    int i, j, status;
+    
+    for (i = 0; i < count; i++) {
+        //customer_thread[i] = (pthread_t *)malloc(sizeof(pthread_t));
+        status = pthread_create(&customer_thread[i], NULL, process_thread, customer_list);
+        
+        if (status != 0) {
+            fprintf(stderr, "Error creating customer thread\n");
+            exit(1);
+        }
+        
+        customer_list = customer_list->next;
+    }
+    
+    for(j=0; j < count; j++)
+    {
+        pthread_join(customer_thread[j], NULL);
+    }
+    
     return 0;
 }
 
@@ -388,13 +420,14 @@ int main(int argc, char *argv[])
     
 	//process file - argv[1]
     parse_file(argv[1]);
+    
 	//save # of threads
 	//create LL of customer structs (
 	
 	init();
 	
 	//create customer threads
-    customer_threads();
+    create_customer_threads(count);
 	//call main thread function - implement Wu's algorithm	
 
 	/*
