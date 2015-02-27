@@ -216,6 +216,11 @@ Customer *addend (Customer *listp, Customer *newp){
 }
 
 int higher_priority(Customer *p, Customer *newp){
+    //compare two structs
+    //if newp priority > p priority, return 1
+    //elif (newp priority == p priority) && (newp arrival < p arrival) return 1
+    //elif (
+    
     return 1;
 }
 
@@ -231,8 +236,8 @@ Customer *additem (Customer *listp, Customer *newp){
     }
     
     for (p = listp; p != NULL; p = p-> next){
-        //if (higher_priority(p, newp)){
-        if (0){
+        if (higher_priority(p, newp)){
+        //if (1){
             printf("Enter if 1.\n");
             if (prev == NULL){
                 newp->next = p;
@@ -362,11 +367,12 @@ void parse_file(char *filename){
     while((read = getline(&line, &len, fp)) != -1){
         count++;
         chomp(line);
+        /*
         if(1){
-            //printf("Retrieved line of length %zu :\n", read);
-            //printf("%s\n", line);
+            printf("Retrieved line of length %zu :\n", read);
+            printf("%s\n", line);
         }
-        
+        */
         /* process line */
         parse_line(line);
         Customer* new_customer = newitem(count);
