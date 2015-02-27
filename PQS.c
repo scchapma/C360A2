@@ -64,6 +64,8 @@ typedef int bool;
 int clerk_is_idle = 1;
 int waiting_customers = 0;
 
+int customer_being_served;
+
 int count = 0;
 
 /* Global / shared variables */
@@ -382,7 +384,7 @@ void request_service(Customer * customer_node){
     
     //add customers to list
     waiting_customers++;
-    printf("Customer %2d waits for the finish of customer __.\n", node->id);
+    printf("Customer %2d waits for the finish of customer %2d.\n", node->id, customer_being_served);
     customer_queue = additem(customer_queue, node);
     //print_list2(customer_queue);
     pthread_mutex_unlock(&queue_mutex);
@@ -412,6 +414,9 @@ void *process_thread(void *customer_node){
     printf("Customer %d arrives: arrival time(), service time(), priority (%2d).\n", node->id, node->priority);
     
     request_service(node);
+    pthread_mutex_lock(&queue_mutex);
+    customer_being_served = node->id;
+    pthread_mutex_unlock(&queue_mutex);
     pthread_mutex_unlock(&service_mutex);
     
     //sleep for service time
