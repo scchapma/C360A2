@@ -198,6 +198,11 @@ Customer *addend (Customer *listp, Customer *newp){
     return listp;
 }
 
+Customer *deletehead (Customer *listp){
+    listp = listp->next;
+    return listp;
+}
+
 
 /* Delete item at given pointer */
 Customer *delitem (Customer *listp, Customer *targetp){
@@ -255,7 +260,7 @@ int parse_line(char* input){
     while (basic_token != NULL){
         token = string_duplicator(basic_token);
         addstring(token);
-        printf("basic_token: %s\n", basic_token);
+        //printf("basic_token: %s\n", basic_token);
         basic_token = strtok(NULL, separator);
     }
     
@@ -269,7 +274,7 @@ int parse_line(char* input){
 
 /* Based on Dr. Zastre's code from SENG 265 */
 void parse_file(char *filename){
-    printf("Enter parse file.\n");
+    //printf("Enter parse file.\n");
     FILE *fp;
     char *line = NULL;
     size_t len = 0;
@@ -294,8 +299,8 @@ void parse_file(char *filename){
         count++;
         chomp(line);
         if(1){
-            printf("Retrieved line of length %zu :\n", read);
-            printf("%s\n", line);
+            //printf("Retrieved line of length %zu :\n", read);
+            //printf("%s\n", line);
         }
         
         /* process line */
@@ -303,7 +308,6 @@ void parse_file(char *filename){
         Customer* new_customer = newitem(count);
         customer_list = addend(customer_list, new_customer);
         print_list(customer_list);
-        //count++;
     }
     
     if(line){
@@ -354,6 +358,7 @@ void request_service(Customer * customer_node){
     node->next = NULL;
     
     pthread_mutex_lock(&service_mutex);
+    //if (clerk_is_idle && !customer_queue){
     if (clerk_is_idle && waiting_customers == 0){
         clerk_is_idle = 0;
         pthread_mutex_unlock(&service_mutex);
@@ -369,20 +374,25 @@ void request_service(Customer * customer_node){
     print_list(customer_queue);
     pthread_mutex_unlock(&queue_mutex);
     
-    while (!clerk_is_idle /*|| not head */){
+    //if clerk is busy or node is not head of list, wait
+    while (!clerk_is_idle || (node->id != customer_queue->id)){
         pthread_cond_wait(&service_convar, &service_mutex);
     }
     //delete head from list
-    //waiting_customers--;
+    pthread_mutex_lock(&queue_mutex);
+    customer_queue = deletehead(customer_queue);
+    waiting_customers--;
+    printf("Waiting customers: %d.\n", waiting_customers);
     printf("Customer %d returning from request service.\n", node->id);
+    pthread_mutex_unlock(&queue_mutex);
 }
 
 void *process_thread(void *customer_node){
     Customer *node = (Customer *) customer_node;
-    printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
-           node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
+    //printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
+           //node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
     if(node->next){
-        printf("Next node: %d.\n", node->next->id);
+        //printf("Next node: %d.\n", node->next->id);
     }
     
     //implement Wu's Algorithm here for each thread...
@@ -413,9 +423,8 @@ int create_customer_threads(int count){
     int i, j, status, status_join;
     
     for (i = 0; i < count; i++) {
-        //customer_thread[i] = (pthread_t *)malloc(sizeof(pthread_t));
         status = pthread_create(&customer_thread[i], NULL, process_thread, customer_list);
-        printf("Created thread #%d.\n", i+1);
+        //printf("Created thread #%d.\n", i+1);
         
         if (status != 0) {
             fprintf(stderr, "Error creating customer thread\n");
