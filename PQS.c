@@ -364,15 +364,30 @@ void request_service(Customer * customer_node){
     pthread_mutex_lock(&service_mutex);
     if (clerk_is_idle && waiting_customers == 0){
         clerk_is_idle = 0;
-        
-        printf("Customer %d being served.\n", customer_node->id);
+        pthread_mutex_unlock(&service_mutex);
+        printf("Customer %d returning from request service.\n", customer_node->id);
         return;
-    }else{
-        printf("Customer %d waiting.\n", customer_node->id);
-        pthread_cond_wait(&service_convar, &service_mutex);
-        printf("Customer %d being served.\n", customer_node->id);
     }
-    //queue_mutex_lock;
+    pthread_mutex_lock(&queue_mutex);
+    //add customers to list
+    waiting_customers++;
+    queue = addend(queue, customer_node);
+    
+    //int i;
+    //for(i=0; i<waiting_customers; i++){
+    while (queue != NULL){
+        printf("Listed customer %d.\n", queue->id);
+        queue = queue->next;
+    }
+    printf("End list.\n");
+    //print_list(queue);
+    pthread_mutex_unlock(&queue_mutex);
+    while (!clerk_is_idle /*|| not head */){
+        pthread_cond_wait(&service_convar, &service_mutex);
+    }
+    //delete head from list
+    //waiting_customers--;
+    printf("Customer %d returning from request service.\n", customer_node->id);
 }
 
 void *process_thread(void *customer_node){
@@ -387,7 +402,7 @@ void *process_thread(void *customer_node){
     usleep(arrival_sleep_time);
     
     //request service
-    request_service (customer_node);
+    request_service(node);
     
     pthread_mutex_unlock(&service_mutex);
     //sleep for service time
