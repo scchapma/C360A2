@@ -412,8 +412,8 @@ void request_service(Customer * customer_node){
     Customer *node = new_queue_node(customer_node);
     
     pthread_mutex_lock(&service_mutex);
-    //if (clerk_is_idle && !customer_queue){
-    if (clerk_is_idle && waiting_customers == 0){
+    if (clerk_is_idle && !customer_queue){
+    //if (clerk_is_idle && waiting_customers == 0){
         clerk_is_idle = 0;
         pthread_mutex_unlock(&service_mutex);
         printf("Customer %d returning from request service if loop.\n", node->id);
