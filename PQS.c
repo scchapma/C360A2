@@ -249,8 +249,6 @@ Customer *additem (Customer *listp, Customer *newp){
         prev = p;
     }
     return listp;
-    //fprintf(stderr, "delitem: %d not in list", targetp->id);
-    //exit(1);
 }
 
 Customer *deletehead (Customer *listp){
@@ -411,7 +409,6 @@ int *dupInt( int i )
 
 void request_service(Customer * customer_node){
     Customer *node = new_queue_node(customer_node);
-    //node->next = NULL;
     
     pthread_mutex_lock(&service_mutex);
     //if (clerk_is_idle && !customer_queue){
@@ -436,6 +433,7 @@ void request_service(Customer * customer_node){
         printf("Enter while loop - element %d.\n", node->id);
         pthread_cond_wait(&service_convar, &service_mutex);
     }
+    
     //delete head from list
     printf("AFter while loop.\n");
     pthread_mutex_lock(&queue_mutex);
@@ -448,14 +446,6 @@ void request_service(Customer * customer_node){
 
 void *process_thread(void *customer_node){
     Customer *node = (Customer *) customer_node;
-    
-    /*
-    printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
-           node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
-    if(node->next){
-        printf("Next node: %d.\n", node->next->id);
-    }
-    */
     
     //implement Wu's Algorithm here for each thread...
     
@@ -473,7 +463,8 @@ void *process_thread(void *customer_node){
     
     //release service
     clerk_is_idle = 1;
-    pthread_cond_signal(&service_convar);
+    printf("Customer %d releasing service.\n", node->id);
+    pthread_cond_broadcast(&service_convar);
     
     return((void *) 0);
 }
