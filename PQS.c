@@ -22,16 +22,6 @@
  **-----------------------------------------------------------------------------
  */
 
-typedef int bool;
-#define true 1
-#define false 0
-
-#define SLEEP_FACTOR 100000
-
-/* clerk flag */
-int clerk_is_idle = 1;
-int waiting_customers = 0;
-
 /* Contents of user input string */
 struct Stringtab{
     int sval;
@@ -51,8 +41,7 @@ typedef struct Customer {
     struct Customer *next;
 } Customer;
 
-/* Head for list of background functions */
-Customer *bg_list = NULL;
+/* Head nodes for list of background functions */
 Customer *customer_list = NULL;
 Customer *customer_queue = NULL;
 
@@ -62,14 +51,17 @@ Customer *customer_queue = NULL;
  ** -------------------------------------------------------------------------------------------
  */
 
-int debug = 0;
+typedef int bool;
+#define true 1
+#define false 0
+
+#define SLEEP_FACTOR 100000
+
+/* clerk flag */
+int clerk_is_idle = 1;
+int waiting_customers = 0;
+
 int count = 0;
-
-
-/* Random # below threshold indicates H; otherwise C. */
-#define TRUE   1
-#define FALSE  0
-
 
 /* Global / shared variables */
 pthread_mutex_t queue_mutex, service_mutex;
@@ -264,28 +256,6 @@ Customer *deletehead (Customer *listp){
     return listp;
 }
 
-
-/* Delete item at given pointer */
-Customer *delitem (Customer *listp, Customer *targetp){
-    Customer *p, *prev;
-    
-    prev = NULL;
-    for (p = listp; p != NULL; p = p-> next){
-        if (p == targetp){
-            if (prev == NULL){
-                listp = p->next;
-            }else{
-                prev->next = p->next;
-            }
-            free(p);
-            return listp;
-        }
-        prev = p;
-    }
-    fprintf(stderr, "delitem: %d not in list", targetp->id);
-    exit(1);
-}
-
 /* Free memory for all remaining nodes in list */
 void freeall (Customer *listp) {
     Customer *next;
@@ -311,7 +281,6 @@ void print_list2(Customer * queuep){
         printf("Listed customer %d.\n", p->id);
         p = p->next;
     }
-    //printf("End list.\n");
 }
 
 
@@ -331,7 +300,6 @@ int parse_line(char* input){
     while (basic_token != NULL){
         token = string_duplicator(basic_token);
         addstring(token);
-        //printf("basic_token: %s\n", basic_token);
         basic_token = strtok(NULL, separator);
     }
     
@@ -345,7 +313,7 @@ int parse_line(char* input){
 
 /* Based on Dr. Zastre's code from SENG 265 */
 void parse_file(char *filename){
-    //printf("Enter parse file.\n");
+    
     FILE *fp;
     char *line = NULL;
     size_t len = 0;
@@ -356,8 +324,6 @@ void parse_file(char *filename){
         printf("Cannot located file %s\n", filename);
         exit(1);
     }
-    
-    //count = 1;
     
     //parse first line of input file
     if((read = getline(&line, &len, fp)) != -1){
@@ -374,7 +340,6 @@ void parse_file(char *filename){
         parse_line(line);
         Customer* new_customer = newitem(count);
         customer_list = addend(customer_list, new_customer);
-        //print_list(customer_list);
     }
     
     if(line){
@@ -399,21 +364,11 @@ void init()
 }
 
 
-/* Needed to pass legit copy of an integer argument to a pthread */
-int *dupInt( int i )
-{
-	int *pi = (int *)malloc(sizeof(int));
-	assert( pi != NULL);
-	*pi = i;
-	return pi;
-}
-
 void request_service(Customer * customer_node){
     Customer *node = new_queue_node(customer_node);
     
     pthread_mutex_lock(&service_mutex);
     if (clerk_is_idle && !customer_queue){
-    //if (clerk_is_idle && waiting_customers == 0){
         clerk_is_idle = 0;
         pthread_mutex_unlock(&service_mutex);
         printf("Customer %d returning from request service if loop.\n", node->id);
@@ -431,7 +386,6 @@ void request_service(Customer * customer_node){
     
     //if clerk is busy or node is not head of list, wait
     while (!clerk_is_idle || (node->id != customer_queue->id)){
-        //printf("Enter while loop - element %d.\n", node->id);
         pthread_cond_wait(&service_convar, &service_mutex);
     }
     
@@ -454,10 +408,9 @@ void *process_thread(void *customer_node){
     usleep(arrival_sleep_time);
     printf("Customer %d arrives: arrival time(), service time(), priority (%2d).\n", node->id, node->priority);
     
-    //request service
     request_service(node);
-    
     pthread_mutex_unlock(&service_mutex);
+    
     //sleep for service time
     printf("The clerk starts serving customer %2d at time ().\n", node->id);
     int service_sleep_time = SLEEP_FACTOR*(node->service_time);
@@ -481,7 +434,6 @@ int create_customer_threads(int count){
     
     for (i = 0; i < count; i++) {
         status = pthread_create(&customer_thread[i], NULL, process_thread, customer_list);
-        //printf("Created thread #%d.\n", i+1);
         
         if (status != 0) {
             fprintf(stderr, "Error creating customer thread\n");
@@ -516,7 +468,12 @@ int main(int argc, char *argv[])
     parse_file(argv[1]);
 	init();
 	create_customer_threads(count);
-	
+    
+	//reset_string_array();
+    //freeall();
+    //freeall();
+    //destroy mutex & convar;
+    
 	exit(0);
 }
 
