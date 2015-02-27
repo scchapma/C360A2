@@ -485,10 +485,12 @@ void *process_thread(void *customer_node){
     usleep(service_sleep_time);
     
     //release service
+    pthread_mutex_lock(&service_mutex);
     clerk_is_idle = 1;
     printf("The clerk finishes the service to customer %2d at time ().\n", node->id);
     printf("Customer %d releasing service.\n", node->id);
     pthread_cond_broadcast(&service_convar);
+    pthread_mutex_unlock(&service_mutex);
     
     return((void *) 0);
 }
