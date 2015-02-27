@@ -74,6 +74,8 @@ pthread_cond_t service_convar;
 
 int num_threads;
 
+struct timeval start, end;
+
 /* -------------------------------------------------------------------------------------------
  ** 		ACCESSORY FUNCTIONS
  ** -------------------------------------------------------------------------------------------
@@ -411,8 +413,9 @@ void *process_thread(void *customer_node){
     //sleep until arrival time
     int arrival_sleep_time = SLEEP_FACTOR*(node->arrival_time);
     usleep(arrival_sleep_time);
-    printf("Customer %d arrives: arrival time(), service time(), priority (%2d).\n", node->id, node->priority);
-    
+    printf("Customer %d arrives: arrival time(%.2f), service time(%.2f), priority (%2d).\n", node->id,
+           ((double)(node->arrival_time))/10, ((double)(node->service_time))/10, node->priority);
+  
     request_service(node);
     pthread_mutex_lock(&queue_mutex);
     customer_being_served = node->id;
@@ -440,6 +443,7 @@ int create_customer_threads(int count){
     
     int i, j, status, status_join;
     
+    gettimeofday(&start, NULL);
     for (i = 0; i < count; i++) {
         status = pthread_create(&customer_thread[i], NULL, process_thread, customer_list);
         
@@ -481,7 +485,6 @@ int main(int argc, char *argv[])
     //freeall();
     //freeall();
     //destroy mutex & convar;
-    //stray comment
     
 	exit(0);
 }
