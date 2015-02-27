@@ -1,9 +1,11 @@
-.phony all:
+CC=gcc
+CFLAGS=-g -std=c99 -Wall -pedantic
+LDFLAGS=-lpthread 
+
 all: PQS
 
-PQS: PQS.c
-    gcc PQS.c -o PQS
+PQS: PQS.c 
+	$(CC) $(CFLAGS) PQS.c $(LDFLAGS) -o PQS
 
-.PHONY clean:
 clean:
-    -rm -rf *.o *.exe
+	-rm -rf *.o

@@ -54,9 +54,7 @@ typedef struct Customer {
 /* Head for list of background functions */
 Customer *bg_list = NULL;
 Customer *customer_list = NULL;
-
-/* File-scope variable: root node for the linked list */
-Customer *queue = NULL;
+Customer *customer_queue = NULL;
 
 
 /* -------------------------------------------------------------------------------------------
@@ -191,9 +189,10 @@ Customer *addfront (Customer *listp, Customer *newp){
 Customer *addend (Customer *listp, Customer *newp){
     Customer *p;
     if(listp == NULL){
-        //listp = newp;
+        printf("addend if loop.\n");
         return newp;
     }
+    printf("addend else loop.\n");
     for (p=listp; p->next != NULL; p = p->next);
     p->next = newp;
     return listp;
@@ -239,25 +238,6 @@ void print_list (Customer *listp){
         printf("Customer #%d.\n", listp->id);
     }
 }
-
-/* Traverse list and delete nodes that have terminated*/
-/*
-void check_bg_list(Customer *listp){
-    
-    for ( ; listp != NULL; listp = listp->next){
-        int retVal = waitpid(listp->pid, &listp->status, WNOHANG);
-        if (retVal == -1){
-            perror("waitpid");
-            exit(EXIT_FAILURE);
-        }
-        if(retVal > 0){
-            printf("Background process terminated - pid: %d, command: %s.\n",
-                   listp->pid, listp->name, WEXITSTATUS(listp->status));
-            bg_list = delitem(bg_list, listp);
-        }
-    }
-}
-*/
 
 
 /* -------------------------------------------------------------------------------------------
@@ -350,6 +330,15 @@ void init()
     
 }
 
+void print_list2(Customer * queuep){
+    Customer *p = queuep;
+    while (p != NULL){
+        printf("Listed customer %d.\n", p->id);
+        p = p->next;
+    }
+    printf("End list.\n");
+}
+
 
 /* Needed to pass legit copy of an integer argument to a pthread */
 int *dupInt( int i )
@@ -361,39 +350,39 @@ int *dupInt( int i )
 }
 
 void request_service(Customer * customer_node){
+    Customer *node = customer_node;
+    node->next = NULL;
+    
     pthread_mutex_lock(&service_mutex);
     if (clerk_is_idle && waiting_customers == 0){
         clerk_is_idle = 0;
         pthread_mutex_unlock(&service_mutex);
-        printf("Customer %d returning from request service.\n", customer_node->id);
+        printf("Customer %d returning from request service if loop.\n", node->id);
         return;
     }
+    
     pthread_mutex_lock(&queue_mutex);
     //add customers to list
     waiting_customers++;
-    queue = addend(queue, customer_node);
-    
-    //int i;
-    //for(i=0; i<waiting_customers; i++){
-    while (queue != NULL){
-        printf("Listed customer %d.\n", queue->id);
-        queue = queue->next;
-    }
-    printf("End list.\n");
-    //print_list(queue);
+    printf("Waiting customers: %d.\n", waiting_customers);
+    customer_queue = addend(customer_queue, node);
+    print_list(customer_queue);
     pthread_mutex_unlock(&queue_mutex);
     while (!clerk_is_idle /*|| not head */){
         pthread_cond_wait(&service_convar, &service_mutex);
     }
     //delete head from list
     //waiting_customers--;
-    printf("Customer %d returning from request service.\n", customer_node->id);
+    printf("Customer %d returning from request service.\n", node->id);
 }
 
 void *process_thread(void *customer_node){
     Customer *node = (Customer *) customer_node;
     printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
            node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
+    if(node->next){
+        printf("Next node: %d.\n", node->next->id);
+    }
     
     //implement Wu's Algorithm here for each thread...
     
