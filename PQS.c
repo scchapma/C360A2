@@ -232,7 +232,7 @@ Customer *additem (Customer *listp, Customer *newp){
     
     for (p = listp; p != NULL; p = p-> next){
         //if (higher_priority(p, newp)){
-        if (1){
+        if (0){
             printf("Enter if 1.\n");
             if (prev == NULL){
                 newp->next = p;
@@ -243,11 +243,12 @@ Customer *additem (Customer *listp, Customer *newp){
             }
             return listp;
         }
-        if(!(p->next)){
-            p->next = newp;
-        }
+        //if(!(p->next)){
+        //    p->next = newp;
+        //}
         prev = p;
     }
+    prev->next = newp;
     return listp;
 }
 
