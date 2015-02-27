@@ -28,6 +28,10 @@ typedef int bool;
 
 #define SLEEP_FACTOR 100000
 
+/* clerk flag */
+int clerk_is_idle = 1;
+int waiting_customers = 0;
+
 /* Contents of user input string */
 struct Stringtab{
     int sval;
@@ -71,6 +75,7 @@ int count = 0;
 
 /* Global / shared variables */
 pthread_mutex_t queue_mutex, service_mutex;
+pthread_cond_t service_convar;
 
 int num_threads;
 
@@ -335,10 +340,11 @@ void init()
     /*init mutexes*/
     int init_queue_mutex = pthread_mutex_init(&queue_mutex, NULL);
     int init_service_mutex = pthread_mutex_init(&service_mutex, NULL);
+    int init_service_convar = pthread_cond_init(&service_convar, NULL);
     
     /*check for nulls */
-    if(init_queue_mutex != 0 || init_service_mutex != 0){
-        fprintf(stdout, "Exiting - failed to initialize the mutexes.  Error: %d\n", errno);
+    if(init_queue_mutex != 0 || init_service_mutex != 0 || init_service_convar != 0){
+        fprintf(stdout, "Exiting - failed to initialize the mutexes/convars.  Error: %d\n", errno);
         exit(1);
     }
     
@@ -354,6 +360,21 @@ int *dupInt( int i )
 	return pi;
 }
 
+void request_service(Customer * customer_node){
+    pthread_mutex_lock(&service_mutex);
+    if (clerk_is_idle && waiting_customers == 0){
+        clerk_is_idle = 0;
+        
+        printf("Customer %d being served.\n", customer_node->id);
+        return;
+    }else{
+        printf("Customer %d waiting.\n", customer_node->id);
+        pthread_cond_wait(&service_convar, &service_mutex);
+        printf("Customer %d being served.\n", customer_node->id);
+    }
+    //queue_mutex_lock;
+}
+
 void *process_thread(void *customer_node){
     Customer *node = (Customer *) customer_node;
     printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
@@ -362,12 +383,21 @@ void *process_thread(void *customer_node){
     //implement Wu's Algorithm here for each thread...
     
     //sleep until arrival time
-    int sleep_time = SLEEP_FACTOR*(node->arrival_time);
-    usleep(sleep_time);
+    int arrival_sleep_time = SLEEP_FACTOR*(node->arrival_time);
+    usleep(arrival_sleep_time);
     
     //request service
+    request_service (customer_node);
+    
+    pthread_mutex_unlock(&service_mutex);
     //sleep for service time
+    int service_sleep_time = SLEEP_FACTOR*(node->service_time);
+    usleep(service_sleep_time);
+    
     //release service
+    clerk_is_idle = 1;
+    pthread_cond_signal(&service_convar);
+    //pthread_mutex_unlock(&service_mutex);
     
     return((void *) 0);
 }
