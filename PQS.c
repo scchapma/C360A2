@@ -389,6 +389,7 @@ void request_service(Customer * customer_node){
 
 void *process_thread(void *customer_node){
     Customer *node = (Customer *) customer_node;
+    
     //printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
            //node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
     if(node->next){
