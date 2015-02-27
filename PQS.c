@@ -171,8 +171,6 @@ Customer *newitem (int count){
     newp->priority = atoi(*stringtab.stringval++);
     newp->place_in_list = count;
     newp->next = NULL;
-    printf("New list item: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
-           newp->id, newp->arrival_time, newp->service_time, newp->priority, newp->place_in_list);
     
     reset_string_array();
     
@@ -190,8 +188,6 @@ Customer *new_queue_node (Customer *oldnode){
     newp->priority = oldnode->priority;
     newp->place_in_list = oldnode->place_in_list;
     newp->next = NULL;
-    //printf("New queue item: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
-           //newp->id, newp->arrival_time, newp->service_time, newp->priority, newp->place_in_list);
     
     return newp;
 }
@@ -206,10 +202,8 @@ Customer *addfront (Customer *listp, Customer *newp){
 Customer *addend (Customer *listp, Customer *newp){
     Customer *p;
     if(listp == NULL){
-        printf("addend if loop.\n");
         return newp;
     }
-    printf("addend else loop.\n");
     for (p=listp; p->next != NULL; p = p->next);
     p->next = newp;
     return listp;
@@ -250,8 +244,6 @@ Customer *additem (Customer *listp, Customer *newp){
     
     for (p = listp; p != NULL; p = p-> next){
         if (higher_priority(p, newp)){
-        //if (1){
-            printf("Enter if 1.\n");
             if (prev == NULL){
                 newp->next = p;
                 listp = newp;
@@ -261,9 +253,6 @@ Customer *additem (Customer *listp, Customer *newp){
             }
             return listp;
         }
-        //if(!(p->next)){
-        //    p->next = newp;
-        //}
         prev = p;
     }
     prev->next = newp;
@@ -380,17 +369,12 @@ void parse_file(char *filename){
     while((read = getline(&line, &len, fp)) != -1){
         count++;
         chomp(line);
-        /*
-        if(1){
-            printf("Retrieved line of length %zu :\n", read);
-            printf("%s\n", line);
-        }
-        */
+        
         /* process line */
         parse_line(line);
         Customer* new_customer = newitem(count);
         customer_list = addend(customer_list, new_customer);
-        print_list(customer_list);
+        //print_list(customer_list);
     }
     
     if(line){
@@ -402,8 +386,6 @@ void parse_file(char *filename){
 
 void init()
 {
-    fprintf(stdout, "Enter init.\n");
-    
     /*init mutexes*/
     int init_queue_mutex = pthread_mutex_init(&queue_mutex, NULL);
     int init_service_mutex = pthread_mutex_init(&service_mutex, NULL);
@@ -414,7 +396,6 @@ void init()
         fprintf(stdout, "Exiting - failed to initialize the mutexes/convars.  Error: %d\n", errno);
         exit(1);
     }
-    
 }
 
 
@@ -440,18 +421,17 @@ void request_service(Customer * customer_node){
     }
     
     pthread_mutex_lock(&queue_mutex);
+    
     //add customers to list
     waiting_customers++;
-    //printf("Waiting customers: %d.\n", waiting_customers);
     printf("Customer %2d waits for the finish of customer __.\n", node->id);
-    //customer_queue = addend(customer_queue, node);
     customer_queue = additem(customer_queue, node);
-    print_list2(customer_queue);
+    //print_list2(customer_queue);
     pthread_mutex_unlock(&queue_mutex);
     
     //if clerk is busy or node is not head of list, wait
     while (!clerk_is_idle || (node->id != customer_queue->id)){
-        printf("Enter while loop - element %d.\n", node->id);
+        //printf("Enter while loop - element %d.\n", node->id);
         pthread_cond_wait(&service_convar, &service_mutex);
     }
     
@@ -460,7 +440,6 @@ void request_service(Customer * customer_node){
     clerk_is_idle = 0;
     customer_queue = deletehead(customer_queue);
     waiting_customers--;
-    //printf("Waiting customers: %d.\n", waiting_customers);
     printf("Customer %d returning from request service.\n", node->id);
     pthread_mutex_unlock(&queue_mutex);
 }
@@ -488,7 +467,6 @@ void *process_thread(void *customer_node){
     pthread_mutex_lock(&service_mutex);
     clerk_is_idle = 1;
     printf("The clerk finishes the service to customer %2d at time ().\n", node->id);
-    printf("Customer %d releasing service.\n", node->id);
     pthread_cond_broadcast(&service_convar);
     pthread_mutex_unlock(&service_mutex);
     
@@ -515,7 +493,6 @@ int create_customer_threads(int count){
     for(j=0; j < count; j++)
     {
         status_join = pthread_join(customer_thread[j], NULL);
-        printf("Joined thread #%d.\n", j+1);
         
         if (status_join != 0) {
             fprintf(stderr, "Error joining customer thread\n");
