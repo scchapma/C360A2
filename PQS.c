@@ -220,11 +220,19 @@ int higher_priority(Customer *p, Customer *newp){
     //if newp priority > p priority, return 1
     if(newp->priority > p->priority){
         return 1;
-    }else if((newp->priority > p->priority) && (newp->arrival_time < p->arrival_time)){
-        return 1;
+    }else if(newp->priority == p->priority){
+        if(newp->arrival_time < p->arrival_time){
+            return 1;
+        }else if(newp->arrival_time == p->arrival_time){
+            if(newp->service_time < p->service_time){
+                return 1;
+            }else if(newp->service_time == p->service_time){
+                if(newp->place_in_list < p->place_in_list){
+                    return 1;
+                }
+            }
+        }
     }
-    //elif (newp priority == p priority) && (newp arrival < p arrival) return 1
-    //elif (
     
     return 0;
 }
