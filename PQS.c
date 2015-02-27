@@ -171,10 +171,27 @@ Customer *newitem (int count){
     newp->priority = atoi(*stringtab.stringval++);
     newp->place_in_list = count;
     newp->next = NULL;
-    printf("New item: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
+    printf("New list item: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
            newp->id, newp->arrival_time, newp->service_time, newp->priority, newp->place_in_list);
     
     reset_string_array();
+    
+    return newp;
+}
+
+/* Node contructor for queue */
+Customer *new_queue_node (Customer *oldnode){
+    Customer *newp;
+    newp = (Customer *) emalloc(sizeof(Customer));
+    
+    newp->id = oldnode->id;
+    newp->arrival_time = oldnode->arrival_time;
+    newp->service_time = oldnode->service_time;
+    newp->priority = oldnode->priority;
+    newp->place_in_list = oldnode->place_in_list;
+    newp->next = NULL;
+    printf("New queue item: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
+           newp->id, newp->arrival_time, newp->service_time, newp->priority, newp->place_in_list);
     
     return newp;
 }
@@ -196,6 +213,44 @@ Customer *addend (Customer *listp, Customer *newp){
     for (p=listp; p->next != NULL; p = p->next);
     p->next = newp;
     return listp;
+}
+
+int higher_priority(Customer *p, Customer *newp){
+    return 1;
+}
+
+/* Add item at given pointer */
+Customer *additem (Customer *listp, Customer *newp){
+    
+    Customer *p, *prev;
+    prev = NULL;
+    
+    if(!listp){
+        listp = newp;
+        return listp;
+    }
+    
+    for (p = listp; p != NULL; p = p-> next){
+        //if (higher_priority(p, newp)){
+        if (1){
+            printf("Enter if 1.\n");
+            if (prev == NULL){
+                newp->next = p;
+                listp = newp;
+            }else{
+                newp->next = p;
+                prev->next = newp;
+            }
+            return listp;
+        }
+        if(!(p->next)){
+            p->next = newp;
+        }
+        prev = p;
+    }
+    return listp;
+    //fprintf(stderr, "delitem: %d not in list", targetp->id);
+    //exit(1);
 }
 
 Customer *deletehead (Customer *listp){
@@ -243,6 +298,16 @@ void print_list (Customer *listp){
         printf("Customer #%d.\n", listp->id);
     }
 }
+
+void print_list2(Customer * queuep){
+    Customer *p = queuep;
+    while (p != NULL){
+        printf("Listed customer %d.\n", p->id);
+        p = p->next;
+    }
+    printf("End list.\n");
+}
+
 
 
 /* -------------------------------------------------------------------------------------------
@@ -334,15 +399,6 @@ void init()
     
 }
 
-void print_list2(Customer * queuep){
-    Customer *p = queuep;
-    while (p != NULL){
-        printf("Listed customer %d.\n", p->id);
-        p = p->next;
-    }
-    printf("End list.\n");
-}
-
 
 /* Needed to pass legit copy of an integer argument to a pthread */
 int *dupInt( int i )
@@ -354,8 +410,8 @@ int *dupInt( int i )
 }
 
 void request_service(Customer * customer_node){
-    Customer *node = customer_node;
-    node->next = NULL;
+    Customer *node = new_queue_node(customer_node);
+    //node->next = NULL;
     
     pthread_mutex_lock(&service_mutex);
     //if (clerk_is_idle && !customer_queue){
@@ -370,15 +426,18 @@ void request_service(Customer * customer_node){
     //add customers to list
     waiting_customers++;
     printf("Waiting customers: %d.\n", waiting_customers);
-    customer_queue = addend(customer_queue, node);
-    print_list(customer_queue);
+    //customer_queue = addend(customer_queue, node);
+    customer_queue = additem(customer_queue, node);
+    print_list2(customer_queue);
     pthread_mutex_unlock(&queue_mutex);
     
     //if clerk is busy or node is not head of list, wait
     while (!clerk_is_idle || (node->id != customer_queue->id)){
+        printf("Enter while loop - element %d.\n", node->id);
         pthread_cond_wait(&service_convar, &service_mutex);
     }
     //delete head from list
+    printf("AFter while loop.\n");
     pthread_mutex_lock(&queue_mutex);
     customer_queue = deletehead(customer_queue);
     waiting_customers--;
@@ -390,11 +449,13 @@ void request_service(Customer * customer_node){
 void *process_thread(void *customer_node){
     Customer *node = (Customer *) customer_node;
     
-    //printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
-           //node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
+    /*
+    printf("New node: id:%d ; arrival:%d ; service:%d ; priority:%d ;count: %d\n",
+           node->id, node->arrival_time, node->service_time, node->priority, node->place_in_list);
     if(node->next){
-        //printf("Next node: %d.\n", node->next->id);
+        printf("Next node: %d.\n", node->next->id);
     }
+    */
     
     //implement Wu's Algorithm here for each thread...
     
@@ -462,14 +523,6 @@ int main(int argc, char *argv[])
 	init();
 	create_customer_threads(count);
 	
-
-	/* join threads */
-    /*
-	for (i=0; i<numAtoms; i++){
-	  pthread_join(*atom[i], NULL);
-	}
-    */
-
 	exit(0);
 }
 
