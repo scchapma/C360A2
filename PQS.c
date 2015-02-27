@@ -368,6 +368,7 @@ void request_service(Customer * customer_node){
     customer_queue = addend(customer_queue, node);
     print_list(customer_queue);
     pthread_mutex_unlock(&queue_mutex);
+    
     while (!clerk_is_idle /*|| not head */){
         pthread_cond_wait(&service_convar, &service_mutex);
     }
@@ -401,7 +402,6 @@ void *process_thread(void *customer_node){
     //release service
     clerk_is_idle = 1;
     pthread_cond_signal(&service_convar);
-    //pthread_mutex_unlock(&service_mutex);
     
     return((void *) 0);
 }
