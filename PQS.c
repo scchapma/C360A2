@@ -218,10 +218,13 @@ Customer *addend (Customer *listp, Customer *newp){
 int higher_priority(Customer *p, Customer *newp){
     //compare two structs
     //if newp priority > p priority, return 1
+    if(newp->priority > p->priority){
+        return 1;
+    }
     //elif (newp priority == p priority) && (newp arrival < p arrival) return 1
     //elif (
     
-    return 1;
+    return 0;
 }
 
 /* Add item at given pointer */
