@@ -378,7 +378,6 @@ void request_service(Customer * customer_node){
     if (clerk_is_idle && !customer_queue){
         clerk_is_idle = 0;
         pthread_mutex_unlock(&service_mutex);
-        printf("Customer %d returning from request service if loop.\n", node->id);
         return;
     }
     
@@ -401,7 +400,6 @@ void request_service(Customer * customer_node){
     clerk_is_idle = 0;
     customer_queue = deletehead(customer_queue);
     waiting_customers--;
-    printf("Customer %d returning from request service.\n", node->id);
     pthread_mutex_unlock(&queue_mutex);
 }
 
@@ -423,14 +421,18 @@ void *process_thread(void *customer_node){
     pthread_mutex_unlock(&service_mutex);
     
     //sleep for service time
-    printf("The clerk starts serving customer %2d at time ().\n", node->id);
+    gettimeofday(&end, NULL);
+    double service_start_time = (double)((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))/1000000;
+    printf("The clerk starts serving customer %2d at time (%.2f).\n", node->id, service_start_time);
     int service_sleep_time = SLEEP_FACTOR*(node->service_time);
     usleep(service_sleep_time);
     
     //release service
     pthread_mutex_lock(&service_mutex);
     clerk_is_idle = 1;
-    printf("The clerk finishes the service to customer %2d at time ().\n", node->id);
+    gettimeofday(&end, NULL);
+    double service_end_time = (double)((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))/1000000;
+    printf("The clerk finishes the service to customer %2d at time (%.2f).\n", node->id, service_end_time);
     pthread_cond_broadcast(&service_convar);
     pthread_mutex_unlock(&service_mutex);
     
