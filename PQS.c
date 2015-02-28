@@ -483,10 +483,13 @@ int main(int argc, char *argv[])
 	init();
 	create_customer_threads(count);
     
-	//reset_string_array();
-    //freeall();
-    //freeall();
-    //destroy mutex & convar;
+    //clean up allocated spaces, mutexes and convars
+    pthread_mutex_destroy(&queue_mutex);
+    pthread_mutex_destroy(&service_mutex);
+    pthread_cond_destroy(&service_convar);
+    
+    freeall(customer_list);
+    freeall(customer_queue);
     
 	exit(0);
 }
